@@ -1,5 +1,8 @@
 package com.mjolnir.yggdrasil.entities;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.annotations.ColumnDefault;
@@ -16,6 +19,7 @@ public class CountryLanguageEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @ColumnDefault("''")
     @JoinColumn(name = "CountryCode", nullable = false)
+    @JsonBackReference
     private CountryEntity countryEntityCode;
 
     @NotNull
@@ -37,10 +41,12 @@ public class CountryLanguageEntity {
         this.id = id;
     }
 
+    @JsonBackReference(value = "countryCode")
     public CountryEntity getCountryCode() {
         return countryEntityCode;
     }
 
+    @JsonBackReference(value = "countryCode")
     public void setCountryCode(CountryEntity countryEntityCode) {
         this.countryEntityCode = countryEntityCode;
     }

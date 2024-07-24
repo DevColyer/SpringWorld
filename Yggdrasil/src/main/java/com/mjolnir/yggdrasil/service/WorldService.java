@@ -1,5 +1,6 @@
 package com.mjolnir.yggdrasil.service;
 
+import com.mjolnir.yggdrasil.dto.CityDTO;
 import com.mjolnir.yggdrasil.entities.CityEntity;
 import com.mjolnir.yggdrasil.entities.CountryEntity;
 import com.mjolnir.yggdrasil.entities.CountryLanguageEntity;
@@ -8,12 +9,15 @@ import com.mjolnir.yggdrasil.repositories.CityRepository;
 import com.mjolnir.yggdrasil.repositories.CountryLanguageRepository;
 import com.mjolnir.yggdrasil.repositories.CountryRepository;
 
+import jakarta.persistence.Id;
 import jakarta.transaction.Transactional;
 
 import org.springframework.data.util.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.PathVariable;
+
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.Optional;
@@ -125,25 +129,25 @@ public class WorldService {
             if (!continent.matches(CONTINENT_REGEX)) {
                 logger.warning("Continent '" + continent + "' does not match valid continents.");
             }
-            if (!(region.matches(REGION_REGEX) && region.length() < 26)) {
+            if (!region.matches(REGION_REGEX) || region.length() >= 26) {
                 logger.warning("Region '" + region + "' does not match valid regions or exceeds 26 characters.");
             }
-            if (!(surfaceArea.compareTo(BigDecimal.ZERO) > 0)) {
+            if (surfaceArea.compareTo(BigDecimal.ZERO) <= 0) {
                 logger.warning("Surface area should be greater than zero.");
             }
-            if (!(independenceYear == null || independenceYear > 0)) {
+            if (independenceYear != null && independenceYear <= 0) {
                 logger.warning("Independence year should be null or greater than zero.");
             }
-            if (!(population == null || population > 0)) {
+            if (population != null && population <= 0) {
                 logger.warning("Population should be null or greater than zero.");
             }
-            if (!(lifeExpectancy == null || lifeExpectancy.compareTo(BigDecimal.ZERO) > 0)) {
+            if (lifeExpectancy != null && lifeExpectancy.compareTo(BigDecimal.ZERO) <= 0) {
                 logger.warning("Life expectancy should be null or greater than zero.");
             }
-            if (!(GNP == null || GNP.compareTo(BigDecimal.ZERO) > 0)) {
+            if (GNP != null && GNP.compareTo(BigDecimal.ZERO) <= 0) {
                 logger.warning("GNP should be null or greater than zero.");
             }
-            if (!(GNPOld == null || GNPOld.compareTo(BigDecimal.ZERO) > 0)) {
+            if (GNPOld != null && GNPOld.compareTo(BigDecimal.ZERO) <= 0) {
                 logger.warning("GNPOld should be null or greater than zero.");
             }
             if (localName == null || localName.length() >= 45) {
@@ -152,19 +156,19 @@ public class WorldService {
             if (governmentForm == null) {
                 logger.warning("Government form is null.");
             }
-            if (!(headOfState == null || !headOfState.isEmpty())) {
+            if (headOfState == null || headOfState.isEmpty())  {
                 logger.warning("Head of state is null or empty.");
             }
-            if (!(countryCode2 != null && countryCode2.length() == 2)) {
+            if (countryCode2 == null || countryCode2.length() != 2) {
                 logger.warning("Country code2 should not be null and must be exactly 2 characters.");
             }
-            if (!(countryCode.length() == 3)) {
+            if (countryCode.length() != 3) {
                 logger.warning("Country code must be exactly 3 characters.");
             }
         }
     }
 
-    public void createNewCountryLanguage(String countryCode, String language, String isOfficial, BigDecimal percentageSpoken) {
+    public void createNewCountryLanguage(String countryCode, String language, String isOfficial, BigDecimal percentageSpoken) throws IllegalArgumentException{
         Optional<CountryEntity> countryEntityOptional = countryRepository.findById(countryCode);
 
         if (countryEntityOptional.isPresent() && language != null && (Objects.equals(isOfficial, "F") || Objects.equals(isOfficial, "T")) && percentageSpoken.compareTo(BigDecimal.ZERO) > 0 && percentageSpoken.compareTo(BigDecimal.valueOf(100)) <= 0) {
@@ -184,19 +188,19 @@ public class WorldService {
 
         } else {
             if (countryEntityOptional.isEmpty()) {
-                logger.warning("Country with code " + countryCode + " does not exist.");
+                throw new IllegalArgumentException("Country with code " + countryCode + " does not exist.");
             }
             if (language == null) {
-                logger.warning("Language cannot be null.");
+                throw new IllegalArgumentException("Language cannot be null.");
             }
             if (percentageSpoken.compareTo(BigDecimal.ZERO) > 0) {
-                logger.warning("Percentage of spoken should be greater than zero.");
+                throw new IllegalArgumentException("Percentage of spoken should be greater than zero.");
             }
             if (percentageSpoken.compareTo(BigDecimal.valueOf(100)) <= 0) {
-                logger.warning("Percentage of spoken should be less than 100");
+                throw new IllegalArgumentException("Percentage of spoken should be less than 100");
             }
             if (isOfficial == null) {
-                logger.warning("isOfficial cannot be null.");
+                throw new IllegalArgumentException("isOfficial cannot be null.");
             }
         }
     }
@@ -329,15 +333,15 @@ public class WorldService {
         countryRepository.findAll().forEach(country -> country.getCountrylanguages().stream()
                 .filter(countryLanguage -> countryLanguage.getLanguage().equalsIgnoreCase(language))
                 .forEach(countryLanguage -> {
-                    if (countryLanguage.getIsOfficial().equals("T")) {
+                    //if (countryLanguage.getIsOfficial().equals("T")) {
                         countriesThatSpeakLanguage.add(country);
-                    }
+                    //}
                 }));
-        return countriesThatSpeakLanguage;
+        return List.copyOf(countriesThatSpeakLanguage);
     }
 
     // Update
-    public boolean updateCityById(Integer id, CityEntity city) {
+    public boolean updateCityById(Integer id, CityDTO city) {
         if (id == null || city == null || city.getPopulation() < 0) {
             return false;
         }
@@ -520,6 +524,14 @@ public class WorldService {
         return countryRepository.findCountryEntitiesByPopulationBetween(lowEnd, highEnd);
     }
 
+    public List<CountryEntity> getAllCountries() {
+        return countryRepository.findAll();
+    }
+
+    public Optional<CountryEntity> getCountryByCode(String countryCode) {
+        return countryRepository.findById(countryCode);
+    }
+
     public CityEntity getCityById(Integer id) {
         Optional<CityEntity> cityOptional = cityRepository.findById(id);
         if (cityOptional.isPresent()) {
@@ -527,6 +539,10 @@ public class WorldService {
         } else {
             throw new IllegalArgumentException("City with ID " + id + " not found");
         }
+    }
+
+    public Optional<CityEntity> getCityOptionalById(Integer id) {
+        return cityRepository.findById(id);
     }
 
     public List<CityEntity> getAllCities() {
@@ -591,5 +607,22 @@ public class WorldService {
         } else {
             throw new IllegalArgumentException("You cannot enter a negative population of: " + maxPopulation);
         }
+    }
+
+    public Optional<CountryLanguageEntity> getLanguageById(String countryCode, String language) {
+        CountryLanguageIdEntity primaryKey = new CountryLanguageIdEntity();
+        primaryKey.setCountryCode(countryCode);
+        primaryKey.setLanguage(language);
+
+        return countryLanguageRepository.findById(primaryKey);
+    }
+
+    public List<CountryLanguageEntity> getAllLanguages() {
+        return countryLanguageRepository.findAll();
+    }
+
+    public boolean isValidCountryCode(String countryCode) {
+        Optional<CountryEntity> country = countryRepository.findById(countryCode);
+        return country.isPresent();
     }
 }

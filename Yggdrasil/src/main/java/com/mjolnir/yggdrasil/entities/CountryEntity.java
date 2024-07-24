@@ -1,5 +1,8 @@
 package com.mjolnir.yggdrasil.entities;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -85,9 +88,11 @@ public class CountryEntity {
     @Column(name = "Code2", nullable = false, length = 2)
     private String code2;
 
+    @JsonManagedReference
     @OneToMany(mappedBy = "countryEntityCode", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<CityEntity> cities = new LinkedHashSet<>();
 
+    @JsonManagedReference
     @OneToMany(mappedBy = "countryEntityCode", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<CountryLanguageEntity> countryLanguageEntities = new LinkedHashSet<>();
 
@@ -215,10 +220,12 @@ public class CountryEntity {
         return cities;
     }
 
+    @JsonBackReference(value = "country-cities")
     public void setCities(Set<CityEntity> cities) {
         this.cities = cities;
     }
 
+    @JsonBackReference(value = "country-languages")
     public Set<CountryLanguageEntity> getCountrylanguages() {
         return countryLanguageEntities;
     }
